@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import logging
+from loguru import logger
 import time
 from tqdm import tqdm
 from torch.nn.modules import BCEWithLogitsLoss
@@ -8,12 +8,10 @@ from train.trainer import Trainer
 from train.metrics import QuerySpanF1
 from typing import List, Dict
 
-logger = logging.getLogger(__name__)
-
 
 class MrcTrainer(Trainer):
-    def __init__(self, model, config):
-        Trainer.__init__(self, model, config)
+    def __init__(self, model, config, accelerator):
+        Trainer.__init__(self, model, config, accelerator)
         self.bce_loss = BCEWithLogitsLoss(reduction="none")
         self.flat_ner = self.config["flat"]
         self.span_f1 = QuerySpanF1(flat=self.flat_ner)
@@ -67,7 +65,7 @@ class MrcTrainer(Trainer):
 
         return start_loss, end_loss, match_loss
 
-    def train(self, train_dataloader, dev_dataloader, test_dataloader):
+    def train(self, train_dataloader, dev_dataloader, test_dataloader, accelerator):
         num_iters_nochange = 0
         best_epoch = 0
         best_dev_pre, best_dev_rec, best_dev_f1 = -1, -1, -1
@@ -75,6 +73,9 @@ class MrcTrainer(Trainer):
         num_steps = len(train_dataloader)
         patience = self.config["patience"]
         self.scheduler = self.get_scheduler(train_dataloader)
+
+        # 配置device
+        self.model, self.optimizer, train_dataloader, dev_dataloader, test_dataloader = self.accelerator.prepare(self.model, self.optimizer, train_dataloader, dev_dataloader, test_dataloader)
 
         logger.info("Model Training ...")
         logger.info("Train Instances Size:%d" % len(train_dataloader.dataset))
@@ -117,7 +118,8 @@ class MrcTrainer(Trainer):
                     )
 
                     loss = start_loss + end_loss + match_loss
-                    loss.backward()
+                    # loss.backward()
+                    accelerator.backward(loss)
                     total_loss += loss.item()
                     batch_loss = loss.item()
 
@@ -131,7 +133,7 @@ class MrcTrainer(Trainer):
                     if (step + 1) % self.config["logging_steps"] == 0:
                         log_lr = self.scheduler.get_last_lr()[0]
                         logger.info(
-                            f"{i + 1} / {num_epoch} epoch - {step} / {num_steps} step, lr: {log_lr}, loss: {batch_loss}"
+                            f"{i + 1} / {num_epoch} epoch - {step + 1} / {num_steps} step, lr: {log_lr}, loss: {batch_loss}"
                         )
                     pbar.update(1)
 
@@ -183,8 +185,9 @@ class MrcTrainer(Trainer):
                     label_idx,
                 ) = batch
                 attention_mask = (tokens != 0).long()
-                start_logits, end_logits, span_logits = self.network(tokens, token_type_ids, attention_mask)
-
+                start_logits, end_logits, span_logits = self.model(tokens, token_type_ids, attention_mask)
+                start_logits, end_logits, span_logits = self.accelerator.gather(start_logits, end_logits, span_logits)
+                start_labels, end_labels, match_labels, start_label_mask, end_label_mask = self.accelerator.gather(start_labels, end_labels, match_labels, start_label_mask, end_label_mask)
                 start_loss, end_loss, match_loss = self.compute_loss(
                     start_logits=start_logits,
                     end_logits=end_logits,
@@ -213,6 +216,7 @@ class MrcTrainer(Trainer):
                 )
                 output["span_f1_stats"] = span_f1_stats
                 outputs.append(output)
+                pbar.update(1)
             return outputs
 
     def calculate_prf(self, outputs: List[Dict]):

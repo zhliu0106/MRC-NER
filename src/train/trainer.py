@@ -1,6 +1,6 @@
 import os
 import time
-import logging
+from loguru import logger
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,13 +8,13 @@ import torch.optim as optim
 from utils.utils import write_json
 from transformers import get_linear_schedule_with_warmup
 
-logger = logging.getLogger(__name__)
 
 
 class Trainer:
-    def __init__(self, model, config):
+    def __init__(self, model, config, accelerator):
         self.model = model
         self.config = config
+        self.accelerator = accelerator
         self.set_optimizer()
 
     def set_optimizer(self):

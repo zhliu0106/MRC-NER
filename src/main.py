@@ -1,15 +1,16 @@
 import torch
-import logging
+from loguru import logger
 import argparse
 from utils.utils import init_logger, show_config, set_seed
 from data_utils import get_data_loader
 from train.mrc_trainer import MrcTrainer
 from model import MrcBertModel
+from accelerate import Accelerator
+
+
+
 
 # from eval import eval_func
-
-
-logger = logging.getLogger(__name__)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -66,6 +67,9 @@ if __name__ == "__main__":
     init_logger(config_dict["log_path"])
     logger.info(config_dict)
     set_seed(config_dict["seed"])
+    accelerator = Accelerator()
+    device = accelerator.device
+
     device = torch.device("cuda") if torch.cuda.is_available() and config_dict["gpu"] >= 0 else torch.device("cpu")
 
     # 加载数据
@@ -78,6 +82,6 @@ if __name__ == "__main__":
     model.to(device)
 
     # 训练
-    trainer = MrcTrainer(model, config_dict)
+    trainer = MrcTrainer(model, config_dict, accelerator)
     trainer.train(train_loader, dev_loader, test_loader)
     print("=" * 20 + "Training End!" + "=" * 20)

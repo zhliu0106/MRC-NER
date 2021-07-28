@@ -5,9 +5,9 @@ cd /home/zhliu/MRC-NER/src
 DATA_DIR="../data/dataset/zh_msra/"
 
 python -u main.py \
-    --train "${DATA_DIR}mrc-ner.train" \
-    --dev "${DATA_DIR}mrc-ner.dev" \
-    --test "${DATA_DIR}mrc-ner.test" \
+    --train "${DATA_DIR}test.train" \
+    --dev "${DATA_DIR}test.train" \
+    --test "${DATA_DIR}test.train" \
     --save_model_dir "../save" \
     --bert_dir "/home/zhliu/plm/chinese_roberta_wwm_ext_large" \
     --log_path "../log" \
@@ -17,7 +17,4 @@ python -u main.py \
     --hidden_size 1024
 
 
-find .. | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
-
-# 更新代码使用accelerate库来控制device，详情见
-# https://github.com/huggingface/accelerate/tree/main/examples
+# find .. | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf

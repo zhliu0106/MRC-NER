@@ -2,12 +2,11 @@ import os
 import time
 import json
 import pickle
-import logging
 import torch
 import random
 import numpy as np
 from typing import Dict
-
+from loguru import logger
 
 def write_json(file: str, obj: Dict) -> None:
     with open(file, "w") as f:
@@ -31,19 +30,16 @@ def get_log_file_name(path: str):
     根据当前时间生成日志名
     """
     currentTime = time.strftime("%Y-%m-%d_%H")
-    logFileName = os.path.join(path, currentTime + ".log")
-    return logFileName
+    log_file_name = os.path.join(path, currentTime + ".log")
+    return log_file_name
 
 
 def init_logger(path: str):
     """
     初始化logger
     """
-    logFileName = get_log_file_name(path)
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO, filename=logFileName
-    )
-
+    log_file_name = get_log_file_name(path)
+    logger.add(log_file_name, backtrace=True, diagnose=True)
 
 def set_seed(seed_num: int) -> None:
     random.seed(seed_num)

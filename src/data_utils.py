@@ -1,13 +1,11 @@
 import os
 import json
 import torch
-import logging
+from loguru import logger
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils.rnn import pad_sequence
 from transformers import BertTokenizer
 from typing import List, Dict
-
-logger = logging.getLogger(__name__)
 
 
 def get_data_loader(config, prefix="train") -> DataLoader:
