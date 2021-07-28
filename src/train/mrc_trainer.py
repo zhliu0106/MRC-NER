@@ -75,7 +75,9 @@ class MrcTrainer(Trainer):
         self.scheduler = self.get_scheduler(train_dataloader)
 
         # 配置device
-        self.model, self.optimizer, train_dataloader, dev_dataloader, test_dataloader = self.accelerator.prepare(self.model, self.optimizer, train_dataloader, dev_dataloader, test_dataloader)
+        self.model, self.optimizer, train_dataloader, dev_dataloader, test_dataloader = self.accelerator.prepare(
+            self.model, self.optimizer, train_dataloader, dev_dataloader, test_dataloader
+        )
 
         logger.info("Model Training ...")
         logger.info("Train Instances Size:%d" % len(train_dataloader.dataset))
@@ -187,7 +189,9 @@ class MrcTrainer(Trainer):
                 attention_mask = (tokens != 0).long()
                 start_logits, end_logits, span_logits = self.model(tokens, token_type_ids, attention_mask)
                 start_logits, end_logits, span_logits = self.accelerator.gather(start_logits, end_logits, span_logits)
-                start_labels, end_labels, match_labels, start_label_mask, end_label_mask = self.accelerator.gather(start_labels, end_labels, match_labels, start_label_mask, end_label_mask)
+                start_labels, end_labels, match_labels, start_label_mask, end_label_mask = self.accelerator.gather(
+                    start_labels, end_labels, match_labels, start_label_mask, end_label_mask
+                )
                 start_loss, end_loss, match_loss = self.compute_loss(
                     start_logits=start_logits,
                     end_logits=end_logits,

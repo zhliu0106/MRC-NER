@@ -8,8 +8,6 @@ from model import MrcBertModel
 from accelerate import Accelerator
 
 
-
-
 # from eval import eval_func
 
 
